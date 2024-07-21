@@ -1,0 +1,33 @@
+node("SlaveServer") {
+    stage('Preparation') { // for display purposes
+        // Get some code from a GitHub repository
+        git 'https://github.com/gonesai4/FlaskAppTest.git'        
+    }
+    stage('Setup PyEnv and VEnv') {
+        echo "Setup PyEnv and VEnv"
+        sh returnStatus: true, script: '''pyenv global pypy3.8-7.3.11
+		python -V
+		echo "#### Create venv and activate it python version 3.8.0 ####"
+		python -m venv 'flaskapp'
+		source flaskapp/bin/activate
+		pip install -r requirements.txt
+		pip install coverage
+		pip install pytest-cov'''
+    }
+    stage('Run Coverage Metrics') {
+        echo "Run Coverage Metrics"
+        sh '''echo "####Cobertura - Code Coverage####"
+        python -m venv 'flaskapp'
+        source flaskapp/bin/activate
+        pytest --cov=main --cov-report xml'''
+        cobertura autoUpdateHealth: false, autoUpdateStability: false, coberturaReportFile: '**/coverage.xml', conditionalCoverageTargets: '70, 0, 0', failUnhealthy: false, failUnstable: false, lineCoverageTargets: '80, 0, 0', maxNumberOfBuilds: 0, methodCoverageTargets: '80, 0, 0', onlyStable: false, sourceEncoding: 'ASCII', zoomCoverageChart: false
+    }
+    stage('Run Unit Test Cases') {
+        echo "Run Unit Test Cases"
+        sh '''echo "#### Running Unit Test Cases ####"
+        python -m venv 'flaskapp'
+        source flaskapp/bin/activate
+        pytest utests --junitxml=./xmlReport/output.xml'''
+        junit allowEmptyResults: true, skipMarkingBuildUnstable: true, stdioRetention: '', testResults: 'xmlReport/output.xml'
+    }
+}
